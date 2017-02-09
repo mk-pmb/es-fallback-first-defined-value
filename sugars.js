@@ -17,7 +17,11 @@ function isDefined(x) { return (x !== undefined); }
 
 function guessFromColor(bev) { return cfg.sugarsByColor[bev.color]; }
 function queryHwdb() { return queryHwdb.errNotFound; }
-function surpriseMe() { return ((Math.random() * 42) + 0.2); }
+
+function surpriseMe() {
+  console.warn('\nW: Wasting randomness for approach which logs next:');
+  return ((Math.random() * 42) + 0.2);
+}
 
 // Let's determine the highest-priority answer!
 
@@ -129,7 +133,7 @@ function isAcceptableValue(x) {
   return false;
 }
 
-console.log("Custom decider function: reminds of ternary operator",
+console.log("Custom decider function: reminds of ternary operator.",
   ( ?| isAcceptableValue
     : guessFromColor(bev)
     : n2u(queryHwdb(bev.idVendor, bev.idProduct))

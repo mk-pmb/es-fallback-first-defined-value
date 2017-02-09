@@ -1,0 +1,24 @@
+{ "name": "es-fallback-first-defined-value",
+  "version": "0.0.2",
+  "description": "Pseudo-transpiler for my suggested ?| operator",
+  "keywords": [],
+
+  "author": "M.K. (https://github.com/mk-pmb)",
+  "homepage": "https://github.com/mk-pmb/es-fallback-first-defined-value-js#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mk-pmb/es-fallback-first-defined-value-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mk-pmb/es-fallback-first-defined-value-js/issues"
+  },
+
+  "private": false, "license": "ISC",
+
+  "main": "test/transpile.js",
+  "scripts": { "test": "bash test/all.sh" },
+  "directories": { "test": "test" },
+
+
+  "npm vs. BOM = Unexpected token": "-*- coding: UTF-8 -*-"
+}
