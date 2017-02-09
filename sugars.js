@@ -1,4 +1,5 @@
 ﻿/*jslint indent: 2, maxlen: 80, node: true */
+/* -*- tab-width: ? -*- */
 'use strict';
 
 // Suppose a robot that can add sugar cubes to beverages.
@@ -6,6 +7,10 @@
 
 var bev = { icon: '\u2615', color: 'sandybrown', opacity: 0.1, temp: 'hot' },
   cfg = { defaultSugars: 0, sugarsByColor: { red: 2 } };
+
+// Some utility functions
+
+function fail(why) { throw new Error(why); }
 
 // Methods for determining how many sugars to add, in order of priority:
 
@@ -137,7 +142,7 @@ console.log("Custom decider function: reminds of ternary operator",
     : surpriseMe(bev)
     // Beware: If there was no acceptable value, you still get the last one!
     // So better append either a default or a last resort:
-    : function fail() { throw new Error('No acceptable value!'); }
+    : fail('No acceptable value!')
   )
   );
 
