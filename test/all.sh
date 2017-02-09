@@ -7,7 +7,11 @@ function transtest_all () {
   local SELFPATH="$(readlink -m "$BASH_SOURCE"/..)"
   cd "$SELFPATH" || return $?
   local NODE_BIN="$(find_first_prog node{js,})"
-  local TRANS_CLI='transpile.cli.js'
+
+  [ -n "$TRANS_CLI" ] || local TRANS_CLI='transpile.cli.js'
+  echo "I: Using transpiler '$TRANS_CLI'." \
+    "You can set env var TRANS_CLI to try another one."
+
   local LINTER="$(find_first_prog jsl elp true)"
   local BEST_DIFF="$(find_first_prog {color,}diff)"
 
