@@ -6,17 +6,26 @@ function transtest_all () {
   export LANG{,UAGE}=en_US.UTF-8
   local SELFPATH="$(readlink -m "$BASH_SOURCE"/..)"
   cd "$SELFPATH" || return $?
+  local BEST_DIFF="$(find_first_prog {color,}diff)"
   local NODE_BIN="$(find_first_prog node{js,})"
 
   [ -n "$TRANS_CLI" ] || local TRANS_CLI='transpile.cli.js'
   echo "I: Using transpiler '$TRANS_CLI'." \
     "You can set env var TRANS_CLI to try another one."
 
-  local LINTER="$(find_first_prog jsl elp true)"
-  local BEST_DIFF="$(find_first_prog {color,}diff)"
+  local LINTER=(
+    jsl
+    elp
+    jslint
+    )
+  LINTER=( "$(find_first_prog "${LINTER[@]}" true)" )
+  case "$(basename "${LINTER[0]}" .js)" in
+    jslint ) LINTER+=( --edition='2013-08-26' );;
+  esac
+  [ "${DEBUGLEVEL:-0}" -ge 4 ] && LINTER=( printf '<%s>\n' "${LINTER[@]}" )
 
   cleanup_tmp
-  "$LINTER" *.js || return $?
+  "${LINTER[@]}" *.js || return $?
 
   transtest_one 'sugars.js' || return $?
 
@@ -42,7 +51,7 @@ function transtest_one {
   nodejs "$TRANS_CLI" "$SRC_JS" >"$TMP_BFN".js || return $?
   diff -sU 1 -- "$SRC_JS" "$TMP_BFN".js >"$TMP_BFN".diff
 
-  "$LINTER" "$TMP_BFN".js || return $?
+  "${LINTER[@]}" "$TMP_BFN".js || return $?
   "$NODE_BIN" "$TMP_BFN".js >"$TMP_BFN".log 2>&1 || return $?
 
   local EXPECT_LOG="expected.$JS_BFN.log"
