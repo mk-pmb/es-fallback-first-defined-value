@@ -11,6 +11,7 @@ var bev = { icon: '\u2615', color: 'sandybrown', opacity: 0.1, temp: 'hot' },
 // Some utility functions
 
 function fail(why) { throw new Error(why); }
+function isDefined(x) { return (x !== undefined); }
 
 // Methods for determining how many sugars to add, in order of priority:
 
@@ -60,21 +61,15 @@ console.log("Wrapper object via helper function:", (function () {
 
 console.log("Cleaner looking wrapper function:", (function () {
 
-  function firstDefined() {
-    var idx, currentValue;
-    for (idx = 0; idx < arguments.length; idx += 1) {
-      currentValue = arguments[idx];
-      if (currentValue !== undefined) { break; }
-    }
-    return currentValue;
-  }
-
-  return firstDefined(
+  return [
     guessFromColor(bev),
     queryHwdb(bev.idVendor, bev.idProduct),
     (cfg || false).defaultSugars,
     surpriseMe(bev)
-  );
+  ].find(isDefined);
+  // ^-- Returns undefined if no items match, and since undefined is the
+  //     only unacceptable value for a regular ?|, that's indistinguishable
+  //     from returning the last item.
 
   // Problem: Always calculates all values, even if the first one is a match.
 }()));
