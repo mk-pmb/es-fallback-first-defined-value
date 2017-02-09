@@ -6,7 +6,7 @@ Wrapper object via helper function: 0
 
 W: Wasting randomness for approach which logs next:
 Cleaner looking wrapper function: 0
-Use lots of functions: 0
+Wrap each expression in a function: 0
 New syntax to the rescue! 0
 Still cleaner than the wrapper objects: 0
 Custom decider function: reminds of ternary operator. undefined

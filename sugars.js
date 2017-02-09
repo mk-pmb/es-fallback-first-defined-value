@@ -12,6 +12,8 @@ var bev = { icon: '\u2615', color: 'sandybrown', opacity: 0.1, temp: 'hot' },
 
 function fail(why) { throw new Error(why); }
 function isDefined(x) { return (x !== undefined); }
+function wrapIfDefined(x) { return ((x !== undefined) && { wrapped: x }); }
+function unwrap(x) { return (x && x.wrapped); }
 
 // Methods for determining how many sugars to add, in order of priority:
 
@@ -53,8 +55,6 @@ console.log("Can't just use ||:",
 
 console.log("Wrapper object via helper function:", (function () {
 
-  function wrapIfDefined(x) { return ((x !== undefined) && { wrapped: x }); }
-
   return (wrapIfDefined(guessFromColor(bev))
     || wrapIfDefined(queryHwdb(bev.idVendor, bev.idProduct))
     || wrapIfDefined((cfg || false).defaultSugars)
@@ -79,23 +79,19 @@ console.log("Cleaner looking wrapper function:", (function () {
 }()));
 
 
-console.log("Use lots of functions:", (function () {
+console.log("Wrap each expression in a function:", (function () {
 
-  function firstDefining() {
-    var idx, currentValue;
-    for (idx = 0; idx < arguments.length; idx += 1) {
-      currentValue = arguments[idx]();
-      if (currentValue !== undefined) { break; }
-    }
-    return currentValue;
-  }
+  function wrap1stDef(keep, f) { return (keep || wrapIfDefined(f())); }
+  function firstDefining(fns) { return unwrap(fns.reduce(wrap1stDef, false)); }
 
-  return firstDefining(
+  // The problem: You need a function for each expression. Arrow functions
+  // don't solve that, they just obfuscate better. ;-)
+  return firstDefining([
     function () { return guessFromColor(bev); },
     function () { return queryHwdb(bev.idVendor, bev.idProduct); },
     function () { return (cfg || false).defaultSugars; },
     function () { return surpriseMe(bev); }
-  );
+  ]);
 }()));
 
 

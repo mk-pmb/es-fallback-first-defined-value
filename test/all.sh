@@ -6,7 +6,6 @@ function transtest_all () {
   export LANG{,UAGE}=en_US.UTF-8
   local SELFPATH="$(readlink -m "$BASH_SOURCE"/..)"
   cd "$SELFPATH" || return $?
-  local BEST_DIFF="$(find_first_prog {color,}diff)"
   local NODE_BIN="$(find_first_prog node{js,})"
 
   [ -n "$TRANS_CLI" ] || local TRANS_CLI='transpile.cli.js'
@@ -23,6 +22,9 @@ function transtest_all () {
     jslint ) LINTER+=( --edition='2013-08-26' );;
   esac
   [ "${DEBUGLEVEL:-0}" -ge 4 ] && LINTER=( printf '<%s>\n' "${LINTER[@]}" )
+
+  local COLORIZE_DIFF=colordiff
+  </dev/null "$COLORIZE_DIFF" &>/dev/null || COLORIZE_DIFF=
 
   cleanup_tmp
   "${LINTER[@]}" *.js || return $?
@@ -44,19 +46,44 @@ function find_first_prog () {
 }
 
 
+function loudfail {
+  "$@" >"${LOGFN:-/dev/stdout}" 2>&1
+  local RV=$?
+  [ "$RV" == 0 ] && return 0
+  echo "E: rv=$RV" >&2
+  [ -n "$LOGFN" ] && nl -ba "$LOGFN" >&2
+  return "$RV"
+}
+
+
+function colorize_diff () {
+  if [ -n "$COLORIZE_DIFF" ]; then
+    diff "$@" | "$COLORIZE_DIFF"
+    return "${PIPESTATUS[0]}"
+  fi
+  diff "$@"
+  return $?
+}
+
+
 function transtest_one {
   local SRC_JS="../$1"
   local JS_BFN="$(basename "$SRC_JS" .js)"
   local TMP_BFN="tmp.$JS_BFN.trans"
-  nodejs "$TRANS_CLI" "$SRC_JS" >"$TMP_BFN".js || return $?
+
+  echo -n "$JS_BFN: transpile… "
+  LOGFN="$TMP_BFN".js loudfail nodejs "$TRANS_CLI" "$SRC_JS" || return $?
   diff -sU 1 -- "$SRC_JS" "$TMP_BFN".js >"$TMP_BFN".diff
 
-  "${LINTER[@]}" "$TMP_BFN".js || return $?
-  "$NODE_BIN" "$TMP_BFN".js >"$TMP_BFN".log 2>&1 || return $?
+  echo -n 'lint… '
+  loudfail "${LINTER[@]}" "$TMP_BFN".js || return $?
+  echo -n 'run… '
+  LOGFN="$TMP_BFN".log loudfail "$NODE_BIN" "$TMP_BFN".js || return $?
 
   local EXPECT_LOG="expected.$JS_BFN.log"
   local DE_RAND='de-randomize.sed'
-  "$BEST_DIFF" -sU 16 --label "$EXPECT_LOG" \
+  echo -n 'compare output: '
+  loudfail colorize_diff -sU 16 --label "$EXPECT_LOG" \
     --label "$DE_RAND( $TMP_BFN.log )" \
     -- "$EXPECT_LOG" <(sed -rf "$DE_RAND" -- "$TMP_BFN".log) || return $?
 
