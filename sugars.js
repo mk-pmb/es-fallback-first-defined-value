@@ -96,8 +96,6 @@ console.log("Use lots of functions:", (function () {
     function () { return (cfg || false).defaultSugars; },
     function () { return surpriseMe(bev); }
   );
-
-  // Problem: Always calculates all values, even if the first one is a match.
 }()));
 
 
