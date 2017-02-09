@@ -28,7 +28,7 @@ function surpriseMe() {
 // Let's determine the highest-priority answer!
 
 
-console.log("The clean but bulky way:", (function ifReturnCopypasta() {
+console.log("Temporary variable: clean but bulky and not DRY.", (function () {
 
   var n = guessFromColor(bev);
   if (n !== undefined) { return n; }
@@ -53,7 +53,7 @@ console.log("Can't just use ||:",
   );
 
 
-console.log("Wrapper object via helper function:", (function () {
+console.log("Wrapper object via or-chained helper functions:", (function () {
 
   return (wrapIfDefined(guessFromColor(bev))
     || wrapIfDefined(queryHwdb(bev.idVendor, bev.idProduct))
@@ -63,7 +63,7 @@ console.log("Wrapper object via helper function:", (function () {
 }()));
 
 
-console.log("Cleaner looking wrapper function:", (function () {
+console.log("Array literal's .find:", (function () {
 
   return [
     guessFromColor(bev),
