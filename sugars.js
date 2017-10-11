@@ -96,6 +96,7 @@ console.log("Wrap each expression in a function:", (function () {
 }()));
 
 
+//§new-syntax
 console.log("New syntax to the rescue!",
   (guessFromColor(bev)
     ?| queryHwdb(bev.idVendor, bev.idProduct)
@@ -106,6 +107,7 @@ console.log("New syntax to the rescue!",
 
 
 // But what about libraries that prefer to return null?
+// (To accept null in the entire chain, read below about custom deciders.)
 
 queryHwdb.errNotFound = null;
 function n2u(x) { return (x === null ? undefined : x); }

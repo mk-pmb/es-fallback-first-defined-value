@@ -12,9 +12,27 @@ at the first defined (`!== undefined`) value, and one that stops at
 the first acceptable value as decided by a custom function.
 
 
+Syntax Preview
+--------------
+
+<!--#include file="sugars.js" start="//§new-syntax" stop="  )"
+  code="javascript" -->
+<!--#verbatim lncnt="7" -->
+```javascript
+console.log("New syntax to the rescue!",
+  (guessFromColor(bev)
+    ?| queryHwdb(bev.idVendor, bev.idProduct)
+    ?| (cfg || false).defaultSugars
+    ?| surpriseMe(bev)
+```
+<!--/include-->
+
+For `?|` with custom criteria, see the bottom of [sugars.js](sugars.js).
+
+
+
 Q&amp;A
 -------
-
 
 ### Why not use `||`?
 
@@ -34,6 +52,14 @@ If `guessFromColor()` already determined to use 0 sugars,
 it's useless to waste CPU cycles on `queryHwdb`.
 Users might even end up with a random number of sugars (`surpriseMe`)
 although three better methods all clearly decided for 0.
+
+
+### What if I want to accept `null` or `undefined` but not `false`?
+
+Use custom criteria, as shown at the bottom of [sugars.js](sugars.js).
+
+If it's just about `null`, vote a thumbs-up emoji on issue
+(:TODO: add issue link when it's filed).
 
 
 ### Is this a [Safe Navigation Operator][safe-nav-op]?
