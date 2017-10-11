@@ -22,7 +22,9 @@ function queryHwdb() { return queryHwdb.errNotFound; }
 
 function surpriseMe() {
   console.warn('\nW: Wasting randomness for approach which logs next:');
-  return ((Math.random() * 42) + 0.2);
+  var n = ((Math.random() * 42) + 0.2);
+  if ((n % 1) === 0) { n += 0.001; }
+  return n;
 }
 
 // Let's determine the highest-priority answer!
@@ -44,14 +46,18 @@ console.log("Temporary variable: clean but bulky and not DRY.", (function () {
 }()));
 
 
-//§why-not-or
 console.log("Can't just use ||:",
   (guessFromColor(bev)
     || queryHwdb(bev.idVendor, bev.idProduct)
-    || ((cfg || false).defaultSugars)
+    || (cfg || false).defaultSugars
     || surpriseMe(bev)
   )
   );
+// ^-- Problems:
+//  * If `guessFromColor()` already determined to use 0 sugars,
+//    it's useless to waste CPU cycles on `queryHwdb`.
+//  * Users might even end up with a random number of sugars (`surpriseMe`)
+//    although three better methods all clearly decided for 0.
 
 
 console.log("Wrapper object via or-chained helper functions:", (function () {
@@ -60,6 +66,7 @@ console.log("Wrapper object via or-chained helper functions:", (function () {
     || wrapIfDefined(queryHwdb(bev.idVendor, bev.idProduct))
     || wrapIfDefined((cfg || false).defaultSugars)
     || { wrapped: surpriseMe(bev) }).wrapped;
+  // This works but is quite verbose.
 
 }()));
 
@@ -96,8 +103,8 @@ console.log("Wrap each expression in a function:", (function () {
 }()));
 
 
-//§new-syntax
 console.log("New syntax to the rescue!",
+  //§new-syntax
   (guessFromColor(bev)
     ?| queryHwdb(bev.idVendor, bev.idProduct)
     ?| (cfg || false).defaultSugars

@@ -29,7 +29,10 @@ function transtest_all () {
   cleanup_tmp
   "${LINTER[@]}" *.js || return $?
 
-  transtest_one 'sugars.js' || return $?
+  local INPUT_JS=
+  for INPUT_JS in ../*.js; do
+    transtest_one "${INPUT_JS#*/}" || return $?
+  done
 
   # cleanup_tmp
   return 0
@@ -47,12 +50,35 @@ function find_first_prog () {
 
 
 function loudfail {
-  "$@" >"${LOGFN:-/dev/stdout}" 2>&1
+  run_with_log "$@"
   local RV=$?
+  if [ -n "$ERR_LOG" ]; then
+    if [ -s "$ERR_LOG" ]; then
+      sed -re 's~^~E: ~' -- "$ERR_LOG" >&2
+      [ "$RV" == 0 ] && RV=1
+    else
+      rm -- "$ERR_LOG"
+    fi
+  fi
   [ "$RV" == 0 ] && return 0
-  echo "E: rv=$RV" >&2
+  echo "E: rv=$RV, output:" >&2
   [ -n "$LOGFN" ] && nl -ba "$LOGFN" >&2
   return "$RV"
+}
+
+
+function run_with_log () {
+  ( # <-- parens: limit scope of our "exec"s
+    [ -z "$LOGFN" ] || exec >"$LOGFN" || return $?
+    if [ -n "$ERR_LOG" ]; then
+      exec 2>"$ERR_LOG" || return $?
+    else
+      exec 2>&1 || return $?
+    fi
+    "$@"
+    return $?
+  )
+  return $?
 }
 
 
@@ -72,7 +98,8 @@ function transtest_one {
   local TMP_BFN="tmp.$JS_BFN.trans"
 
   echo -n "$JS_BFN: transpile… "
-  LOGFN="$TMP_BFN".js loudfail nodejs "$TRANS_CLI" "$SRC_JS" || return $?
+  LOGFN="$TMP_BFN".js ERR_LOG="$TMP_BFN".err \
+    loudfail nodejs "$TRANS_CLI" "$SRC_JS" || return $?
   diff -sU 1 -- "$SRC_JS" "$TMP_BFN".js >"$TMP_BFN".diff
 
   echo -n 'lint… '
@@ -81,11 +108,18 @@ function transtest_one {
   LOGFN="$TMP_BFN".log loudfail "$NODE_BIN" "$TMP_BFN".js || return $?
 
   local EXPECT_LOG="expected.$JS_BFN.log"
+  local EXPECT_CMD=( cat -- "$EXPECT_LOG" )
+  if [ ! -f "$EXPECT_LOG" ]; then
+    EXPECT_LOG="default.ok (no $EXPECT_LOG)"
+    EXPECT_CMD=( echo '+OK test passed' )
+  fi
+
   local DE_RAND='de-randomize.sed'
   echo -n 'compare output: '
   loudfail colorize_diff -sU 16 --label "$EXPECT_LOG" \
     --label "$DE_RAND( $TMP_BFN.log )" \
-    -- "$EXPECT_LOG" <(sed -rf "$DE_RAND" -- "$TMP_BFN".log) || return $?
+    -- <("${EXPECT_CMD[@]}"
+      ) <(sed -rf "$DE_RAND" -- "$TMP_BFN".log) || return $?
 
   return 0
 }

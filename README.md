@@ -5,21 +5,33 @@ Suppose a robot that can add sugar cubes to beverages.
 It has several methods for determining how many sugars to add,
 so there must be some code that determines the highest-priority answer.
 
-In [sugars.js](sugars.js) I collect the approaches I could think of,
-but they're all either rather bulky or won't work (as `||` won't stop
-at `0`), so at the bottom I suggest a new fallback operator that stops
-at the first defined (`!== undefined`) value, and one that stops at
-the first acceptable value as decided by a custom function.
+
+The nonsolutions
+----------------
+
+Each of these have a code demo and comments about their problems
+in [sugars.js](sugars.js):
+
+| Strategy                  | nice code   | lazy eval   | correct result¹ |
+|:------------------------- |:-----------:|:-----------:|:-----------:|
+| temporary variable        | ![☐][ck-no] | ![☑][ck-hz] | ![☑][ck-hz] |
+| just use &#124;&#124;     | ![☑][ck-hz] | ![☑][ck-pt] | ![☐][ck-no] |
+| &#124;&#124; wrap(…)      | ![☐][ck-no] | ![☑][ck-hz] | ![☑][ck-hz] |
+| [ …values ].find()        | ![☑][ck-hz] | ![☐][ck-no] | ![☑][ck-pt] |
+| [ …functions ].reduce()   | ![☐][ck-no] | ![☑][ck-hz] | ![☑][ck-hz] |
+
+¹ Without lazy eval, "correct result" can only be half because
+gratuitous evaluation of the later expressions might have modified
+the (meaning of the) result or might have thrown an Error.
 
 
-Syntax Preview
---------------
+New syntax to the rescue!
+-------------------------
 
-<!--#include file="sugars.js" start="//§new-syntax" stop="  )"
+<!--#include file="sugars.js" start="  //§new-syntax" stop="  )"
   code="javascript" -->
-<!--#verbatim lncnt="7" -->
+<!--#verbatim lncnt="6" -->
 ```javascript
-console.log("New syntax to the rescue!",
   (guessFromColor(bev)
     ?| queryHwdb(bev.idVendor, bev.idProduct)
     ?| (cfg || false).defaultSugars
@@ -33,26 +45,6 @@ For `?|` with custom criteria, see the bottom of [sugars.js](sugars.js).
 
 Q&amp;A
 -------
-
-### Why not use `||`?
-
-<!--#include file="sugars.js" start="//§why-not-or" stop="  )"
-  code="javascript" -->
-<!--#verbatim lncnt="7" -->
-```javascript
-console.log("Can't just use ||:",
-  (guessFromColor(bev)
-    || queryHwdb(bev.idVendor, bev.idProduct)
-    || ((cfg || false).defaultSugars)
-    || surpriseMe(bev)
-```
-<!--/include-->
-
-If `guessFromColor()` already determined to use 0 sugars,
-it's useless to waste CPU cycles on `queryHwdb`.
-Users might even end up with a random number of sugars (`surpriseMe`)
-although three better methods all clearly decided for 0.
-
 
 ### What if I want to accept `null` or `undefined` but not `false`?
 
@@ -81,6 +73,10 @@ or how many ads to show before a funny cat video.
 &nbsp;
 
   [safe-nav-op]: https://en.wikipedia.org/wiki/Safe_navigation_operator
+  [ck-hz]: https://raw.githubusercontent.com/mk-pmb/misc/master/gfm-util/img/checkmark-has.gif "☑"
+  [ck-up]: https://raw.githubusercontent.com/mk-pmb/misc/master/gfm-util/img/checkmark-up.gif "⟎"
+  [ck-pt]: https://raw.githubusercontent.com/mk-pmb/misc/master/gfm-util/img/checkmark-partial.gif "◪"
+  [ck-no]: https://raw.githubusercontent.com/mk-pmb/misc/master/gfm-util/img/checkmark-minus.gif "☐"
 
 -----
 
