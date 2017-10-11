@@ -58,8 +58,8 @@ although three better methods all clearly decided for 0.
 
 Use custom criteria, as shown at the bottom of [sugars.js](sugars.js).
 
-If it's just about `null`, vote a thumbs-up emoji on issue
-(:TODO: add issue link when it's filed).
+If it's just about `null`, vote a thumbs-up emoji on
+[issue #4](https://github.com/mk-pmb/es-fallback-first-defined-value/issues/4).
 
 
 ### Is this a [Safe Navigation Operator][safe-nav-op]?
