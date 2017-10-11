@@ -44,6 +44,7 @@ console.log("Temporary variable: clean but bulky and not DRY.", (function () {
 }()));
 
 
+//§why-not-or
 console.log("Can't just use ||:",
   (guessFromColor(bev)
     || queryHwdb(bev.idVendor, bev.idProduct)
