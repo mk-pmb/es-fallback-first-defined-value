@@ -34,13 +34,14 @@ function transtest_all () {
     transtest_one "${INPUT_JS#*/}" || return $?
   done
 
-  # cleanup_tmp
+  cleanup_tmp
+  echo; echo '+OK all tests passed.'
   return 0
 }
 
 
 function cleanup_tmp () {
-  rm -- tmp.* 2>/dev/null
+  rm -- tmp.* ../tmp.*.trans.js 2>/dev/null
 }
 
 
@@ -93,19 +94,27 @@ function colorize_diff () {
 
 
 function transtest_one {
+  case "$1" in
+    tmp.* ) return 0;;
+  esac
   local SRC_JS="../$1"
   local JS_BFN="$(basename "$SRC_JS" .js)"
   local TMP_BFN="tmp.$JS_BFN.trans"
+  local TMP_JS="$TMP_BFN.js"
 
   echo -n "$JS_BFN: transpile… "
-  LOGFN="$TMP_BFN".js ERR_LOG="$TMP_BFN".err \
+  LOGFN="$TMP_JS" ERR_LOG="$TMP_BFN".err \
     loudfail nodejs "$TRANS_CLI" "$SRC_JS" || return $?
-  diff -sU 1 -- "$SRC_JS" "$TMP_BFN".js >"$TMP_BFN".diff
+  diff -sU 1 -- "$SRC_JS" "$TMP_JS" >"$TMP_BFN".diff
+
+  mv --target-directory=.. -- "$TMP_JS" || return $?
+  TMP_JS="../$TMP_JS"
 
   echo -n 'lint… '
-  loudfail "${LINTER[@]}" "$TMP_BFN".js || return $?
+  loudfail "${LINTER[@]}" "$TMP_JS" || return $?
   echo -n 'run… '
-  LOGFN="$TMP_BFN".log loudfail "$NODE_BIN" "$TMP_BFN".js || return $?
+  LOGFN="$TMP_BFN".log loudfail "$NODE_BIN" "$TMP_JS" || return $?
+  # mv --target-directory=. -- "$TMP_JS" || return $?
 
   local EXPECT_LOG="expected.$JS_BFN.log"
   local EXPECT_CMD=( cat -- "$EXPECT_LOG" )

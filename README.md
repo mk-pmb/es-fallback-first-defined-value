@@ -28,18 +28,37 @@ the (meaning of the) result or might have thrown an Error.
 New syntax to the rescue!
 -------------------------
 
-<!--#include file="sugars.js" start="  //§new-syntax" stop="  )"
+<!--#include file="sugars.js" start="  //§new-syntax" stop="  //§"
   code="javascript" -->
-<!--#verbatim lncnt="6" -->
+<!--#verbatim lncnt="7" -->
 ```javascript
-  (guessFromColor(bev)
+  var n = (guessFromColor(bev)
     ?| queryHwdb(bev.idVendor, bev.idProduct)
     ?| (cfg || false).defaultSugars
     ?| surpriseMe(bev)
+    );
 ```
 <!--/include-->
 
-For `?|` with custom criteria, see the bottom of [sugars.js](sugars.js).
+<!--#include file="sugars.js" start="  //§custom-decider-func" stop="  //§"
+  code="javascript" -->
+<!--#verbatim lncnt="11" -->
+```javascript
+  var n = ( ?| checkAcceptable
+    : guessFromColor(bev)
+    : n2u(queryHwdb(bev.idVendor, bev.idProduct))
+    : (cfg || false).defaultSugars
+    : surpriseMe(bev)
+    // Beware: If there was no acceptable value, you still get the last one!
+    // So better append either a default value, or a last resort:
+    : test.fail('No acceptable value!')
+    );
+```
+<!--/include-->
+
+* For detauls, read the comments in [sugars.js](sugars.js).
+* For `?|` with different criteria for each expression,
+  see [flakes.js](flakes.js).
 
 
 

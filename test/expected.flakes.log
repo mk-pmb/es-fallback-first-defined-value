@@ -1,8 +1,0 @@
-First acceptable snowflake: { icon: '*', color: 'snow' }
-Evaluate DFE first: TypeError: Validity decider expression must evaluate to either null or a function
-sideEffect(): hello
-… then the value, then decide: Error: bothered
-Acceptable value at start of chain: 42
-Both unacceptable: false
-sideEffect(): hello
-Acceptable undefined: undefined

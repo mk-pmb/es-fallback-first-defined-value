@@ -2,13 +2,6 @@
 /* -*- tab-width: ? -*- */
 'use strict';
 
-// First up, some helper functions.
-
-function dare(f) { try { return f(); } catch (e) { return String(e); } }
-function alwaysAccept() { return true; }
-function neverAccept() { return false; }
-function sideEffect(msg) { console.log('sideEffect(): ' + msg); }
-
 // Suppose several clouds that can produce snowflakes,
 // and a robot that shall pick a good one according to
 // its user's rules. However, due to their individuality,
@@ -34,9 +27,9 @@ codepoint.even = function (sf) { return !codepoint.odd(sf); };
 function dontBotherMe() { throw new Error('bothered'); }
 function auroraBorealis() { throw new Error("I don't produce snow."); }
 
-var month = 12;
+var month = 12, test = require('./test/lib_test.js');
 
-console.log("First acceptable snowflake:",
+test.deepEq("First acceptable snowflake",
   (undefined
     // ^-- implied if ?|.if() is encountered with no previous expression.
     ?|.if(pureWhite)        cloud1()
@@ -59,52 +52,68 @@ console.log("First acceptable snowflake:",
     // ^-- … this .if()
     ?|.if(colorful)       auroraBorealis()
     ?| { error: "Couldn't find any. :-(" }
-  )
-  );
+  ),
+  cloud8());
 
-console.log("Evaluate DFE first:", dare(function () {
-  return (undefined
+
+test.err("Evaluate DFE first", function () {
+  return (
     ?|.if(codepoint.evem) cloud4()
     // ^-- Due to the typo, there's no way we could decide the
     //    result of cloud4() so don't waste CPU cycles on it.
     );
-}));
+}, 'TypeError: Criterion must be either null or a function.');
 
-console.log("… then the value, then decide:", dare(function () {
-  return (undefined
-    ?|.if(dontBotherMe)   [ 'Array literal with a', sideEffect('hello') ]
+
+test.err("… then the value, then decide", function () {
+  return (
+    ?|.if(dontBotherMe)   [ test.sideEffects.args('arrayLiteral')('bother') ]
     // ^-- This time the DFE produces a valid function,
     //    so the array literal is evaluated (no problem yet)
     //    and then checked (which throws an Error).
+    ?| { error: 'dontBotherMe should have thrown' }
     );
-}));
+}, 'Error: bothered');
+test.sideEffects.had({ arrayLiteral: ['bother'] });
 
-console.log("Acceptable value at start of chain:",
+
+test.eq("Acceptable value at start of chain",
   (42
     // ^-- This matches, so the next DFE doesn't matter:
     ?|.if(codepoint.evem) cloud4()
     ?|.if(dontBotherMe)   auroraBorealis()
-  )
-  );
+  ),
+  42);
 
-console.log("Both unacceptable:",
-  (undefined
+
+function alwaysAccept() { return true; }
+function neverAccept() { return false; }
+
+test.eq("Winning without acceptance",
+  ( ?|.if(neverAccept)    0
+    // Since the previous item was the implied "undefined",
+    // the chain's current value becomes "0".
+    // However, since it's not accepted, the chain continues:
     ?|.if(neverAccept)    false
-    // ^-- Although it's unacceptable, false wins because it's
-    //    the last value in the chain. Same as with (undefined || false).
-  )
-  );
+    // Now the chain's current is "false". It wasn't accepted either,
+    // but it's the last value in the chain, so it wins as with
+    // (undefined || 0 || false).
+  ),
+  false);
 
-console.log("Acceptable undefined:",
-  (undefined
-    ?|.if(neverAccept)    [ 'Array literal with a', sideEffect('hello') ]
+
+test.eq("Acceptable undefined",
+  ( ?|.if(neverAccept)    [ test.sideEffects.args('arrayLiteral')('undef') ]
     ?|.if(alwaysAccept)   undefined
     ?|.if(dontBotherMe)   auroraBorealis()
-  )
-  );
+  ),
+  undefined);
+test.sideEffects.had({ arrayLiteral: ['undef'] });
 
 
 
 
 
 
+
+test.done();

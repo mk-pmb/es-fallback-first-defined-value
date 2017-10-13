@@ -2,30 +2,27 @@
 /* -*- tab-width: ? -*- */
 'use strict';
 
-function testEq(name, actual, expected) {
-  if (actual === expected) { return; }
-  throw new Error(['Test "' + name + '":', actual, '!==', expected].join(' '));
-}
+var test = require('./test/lib_test.js');
 
 function alwaysAccept() { return true; }
 function neverAccept() { return false; }
 
-testEq("Acceptable first value (default)", 5,
+test.eq("Acceptable first value (default)",
   (5
     ?| 23
     ?| 42
-  )
-  );
+  ),
+  5);
 
-testEq("Acceptable first value (alwaysAccept)", 5,
+test.eq("Acceptable first value (alwaysAccept)",
   ( ?| alwaysAccept
     : 5
     : 23
     : 42
-  )
-  );
+  ),
+  5);
 
-testEq("Acceptable first value (neverAccept)", false,
+test.eq("Acceptable first value (neverAccept)", false,
   ( ?| neverAccept
     : 5
     : null
@@ -43,4 +40,4 @@ testEq("Acceptable first value (neverAccept)", false,
 
 
 
-console.log('+OK test passed');
+test.done();

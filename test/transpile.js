@@ -9,22 +9,21 @@
 })(function () {
   'use strict';
 
-  var EX = function (code) { return EX.pseudoTranspile(code); };
+  var EX, arMap = Array.prototype.map;
+  EX = function (code) { return EX.makeTranspiler()(code); };
 
-
-  EX.shim = function stopAtFirstAcceptable___TRANSPILE_SHIM(dfltChk, items) {
+  EX.shim = function stopAtFirstAcceptable___TRANSPILE_SHIM(dfltChk, list) {
     function isDefined(x) { return (x !== undefined); }
     var idx, item, chk, val, prev;
     if (prev !== undefined) { throw new Error('very strange bug'); }
-    for (idx = 0; idx < items.length; idx += 1) {
-      item = items[idx];
+    for (idx = 0; idx < list.length; idx += 1) {
+      item = list[idx];
       chk = null;
       if (item.ifExpr) { chk = item.ifExpr(); }
       if (chk === null) { chk = dfltChk; }
       if (chk === null) { chk = isDefined; }
       if (typeof chk !== 'function') {
-        throw new TypeError('Validity decider expression must ' +
-          'evaluate to either null or a function');
+        throw new TypeError('Criterion must be either null or a function.');
       }
       //if (item.ifExpr) { console.error({ ifExprFunc: chk.name }); }
       // calculate the value expression only if we can check it.
@@ -35,9 +34,6 @@
     return val;
   };
 
-
-  function errIncompat() { throw new Error('Incompatible platform'); }
-
   function unindentFuncDef(func) {
     func = String(func);
     func.replace(/\n +(?=\}$)/, function (ind) {
@@ -46,113 +42,246 @@
     return func;
   }
 
-  function rxm(s, r) {
+  function errIncompat() { throw new Error('Incompatible platform'); }
+  function ifLen(x) { return ((x || false).length && x); }
+  function indent(i, s) { return i + s.replace(/(\n+)/g, '$1' + i); }
+  function isStr(x, no) { return (((typeof x) === 'string') || no); }
+  function arrAdd(arr, items) { arr.push.apply(arr, items); }
+  function v0id() { return; }
+
+  function quot(x) {
+    if (!isStr(x)) { return String(x); }
+    return ('«' + x.replace(/\n/g, '¶\n\t\t^') + '»');
+  }
+
+  function rxm(s, r, g) {
     var m = r.exec(s);
     if (!m) { return false; }
+    if (g && g.forEach) {
+      g.forEach(function (k, i) {
+        if (!k) { return; }
+        m[k] = m[i];
+        delete m[i];
+      });
+    }
     m.before = s.slice(0, m.index);
     m.after = s.slice(m.index + m[0].length);
     return m;
   }
 
-  function indent(i, s) { return i + s.replace(/(\n+)/g, '$1' + i); }
+  EX.shimDef = unindentFuncDef(EX.shim);
+  if (!EX.shimDef.match(/\n +return /)) { errIncompat(); }
+  EX.shimName = (EX.shim.name
+    || rxm(EX.shimDef, /\w+_\w+/)[0]
+    || errIncompat());
 
-  function pseudoTranspile(code) {
+  function expr2func(ex, maxW) {
+    var nl = (isStr(maxW) ? maxW : (ex.length < (maxW || 42) ? '' : '\n'));
+    return ('function () {' + nl + (nl && ' ') +
+      ' return ' + ex + ';' + (nl || ' ') + '}');
+  }
+
+  function expr2iife(ex, maxW) { return '(' + expr2func(ex, maxW) + '())'; }
+
+  function expr2container(ex, opt) {
+    var code = '{ calc: ' + expr2func(ex);
+    opt = (opt || false);
+    if (opt.ifExpr) { code += ', ifExpr: ' + expr2func(opt.ifExpr, 1); }
+    return code + ' },';
+  }
+
+  function maxRepeatRgx(h, m, t) {
+    m = +m;
+    return (m > 0 ? (h + '{0,' + m + '}' + (t || '')) : '');
+  }
+
+
+  EX.makeTranspiler = function () {
     // Currently not caring about AST and real parsing techniques,
     // just a quick hack to run simple examples.
-    var inLines = code.split(/\n/), outLines = [],
-      shimDef = unindentFuncDef(EX.shim), shimName = EX.shim.name;
+    var tr = {}, inLn = [];
+    tr.mode = 'scan';
+    tr.addShimDef = true;
+    tr.output = [];
+    tr.warnings = [];
+    tr.warn = function () {
+      var msg = tr.mode + '@' + inLn.cur;
+      arMap.call(arguments, function (a) {
+        if (a === undefined) { return; }
+        if (a === '') { return; }
+        msg += ' ' + String(a);
+      });
+      tr.warnings.push(msg);
+    };
 
-    if (!shimDef.match(/\n +return /)) { errIncompat(); }
-    shimName = (shimName
-      || (shimDef.match(/\w+_\w+/) || false)[0]
-      || errIncompat());
+    tr.mthd = function (n) {
+      if (!n) { return v0id; }
+      if (tr[n]) { return tr[n]; }
+      tr.warn('no such method: tr.' + n);
+      return v0id;
+    };
 
-    function gate(ln, idx) {
-      gate.lnum = idx + 1;
-      outLines.push(gate[gate.mode](ln));
-    }
-    gate.mode = 'scan';
+    tr.readLine = function (ln, idx) {
+      inLn.cur = idx;
+      var m = rxm(ln, /^\s*\/{2}(debug\w*)=/);
+      if (m) {
+        tr[m[1]] = JSON.parse(m.after);
+        return ln;
+      }
+      tr.debug = false;
+      if (tr.debugNextLine > 0) {
+        tr.debug = 'nxLn:' + tr.debugNextLine;
+        tr.debugNextLine -= 1;
+      }
+      ln = tr.mthd(tr.mode)(ln);
+      tr.output.push(ln);
+    };
 
-    function expr2func(ex) { return 'function () {\n  return ' + ex + ';\n}'; }
+    tr.peek = function (o, n) {
+      o = inLn.cur + (+o || 1);
+      n = (+n || 1);
+      if (n === 1) { return inLn[o]; }
+      return inLn.slice(o, o + n);
+    };
 
-    function expr2container(ex, opt) {
-      code = '{ calc: ' + expr2func(ex);
-      opt = (opt || false);
-      if (opt.ifExpr) { code += ', ifExpr: ' + expr2func(opt.ifExpr); }
-      return code + ' },';
-    }
-
-    gate.logMatch = function (ln, m, hint) {
-      var where = gate.mode + '@' + gate.lnum;
-      if (hint) { where += ' ' + hint; }
+    tr.logMatch = function (m, hint) {
+      function quotKey(k) { return k + ':' + quot(m[k]); }
       if (m) {
         m = Object.assign([], m);
         delete m.index;
         delete m.input;
         delete m.before;
-        delete m.after;
+        //delete m.after;
+        m = Object.keys(m).sort().map(quotKey).join(', ');
       }
-      console.error(where, [ln], m);
+      tr.warn(hint, quot(inLn[inLn.cur]), m);
     };
 
-    gate.scan = function (ln) {
-      if (shimDef && ln.match(/^\w/)) {
-        outLines.push(shimDef);
-        shimDef = null;
+    tr.scan = function (ln, m) {
+      if (tr.addShimDef && ln.match(/^\w/)) {
+        tr.output.push(EX.shimDef);
+        tr.addShimDef = false;
       }
-      var m = rxm(ln, /^(\s*)(\(\)? *|)\?\|/);
-      if (!m) { return ln; }
-      m.ind = m[1];
-      m.paren = m[2];
-      //if (gate.lnum === 67) { gate.logMatch(ln, m); }
-      gate.mode = 'exprList';
-      gate.exprList.until = new RegExp('^' +
-        (m.ind && ('\\s{0,' + m.ind.length + '}')) +
-        '\\)', '');
-      if (m.paren) { return m.ind + shimName  + '(' + m.after.trim() + ', ['; }
-      while ((m.prev || '').match(/^\s*($|\/{2})/)) {
-        m.prev = outLines.pop();
-      }
-      m = rxm(m.prev, /^(\s*)(\w[\w\.= ]*|)\(/);
-      m.ind = m[1];
-      m.stmt = m[2];
-      gate.exprList.hadStmt = !!m.stmt;
-      outLines.push(m.ind + m.stmt + shimName + '(null, [');
-      outLines.push(indent(m.ind + '  ', expr2container(m.after)));
-      return gate.exprList(ln);
-    };
-
-    gate.exprList = function el(ln) {
-      if (ln.match(el.until)) {
-        gate.mode = 'scan';
-        if (el.hadStmt) { ln = ln.replace(/^ {2}/, ''); }
-        return ln.replace(/(\S)/, ']$1');
-      }
-      var m = rxm(ln, /^(\s+):\s*/);
-      if (m) { return indent(m[1], expr2container(m.after)); }
-
-      m = rxm(ln, /^(\s+)\?\|(?=\.([a-z]\w*)|)\s*/);
-      if (m) {
-        m.ind = m[1];
-        m.prop = m[2];
-        if (m.prop === 'if') {
-          m.prop = rxm(m.after, /^\.if\(([ -'\*-~]+)\)\s*/);
-          if (m.prop) {
-            //gate.logMatch(ln, m.prop);
-            m.ifExpr = m.prop[1];
-            return indent(m.ind, expr2container(m.prop.after,
-              { ifExpr: m.ifExpr }));
-          }
-        }
-        return indent(m.ind, expr2container(m.after));
-      }
-
+      m = tr.isFallbackExprLine(ln);
+      tr.mthd(tr.debug && 'logMatch')(m, 'fbl?');
+      if (m) { return tr.scanFallbackExprLine(m, ln); }
       return ln;
     };
 
-    inLines.forEach(gate);
-    return outLines.join('\n');
-  }
+    tr.scanFallbackExprLine = function (m) {
+      m.untilMaxIndent = m.ind.length;
+      (function findStartingParen() {
+        if (m.paren) {
+          if (m.prop) {
+            m.expr1 = 'undefined';
+            return;
+          }
+          if (tr.peek().match(/^\s+:/)) {
+            m.customDeciderExpr = m.after;
+            m.untilMaxIndent += 2;
+          }
+          return;
+        }
+        // paren isn't in this line => rewind
+        tr.exprListScrollback(m);
+        if (m.stmt) { tr.logMatch(m, 'unexpected stmt w/o paren'); }
+        m.stmt = m.prevStmt;
+        m.ind = m.prevInd;
+        m.expr1 = m.prevArgs;
+      }());
+      tr.mthd(tr.debug && 'logMatch')(m, 'scan |?');
+      return tr.beginExprList(m);
+    };
+
+    tr.isFallbackExprLine = function (ln) {
+      var m = rxm(ln,
+        /^(\s+)(\w[\w\.= ]*|)(\(\)? *|)\?\|(?=\.([a-z]\w*)|)\s*/,
+        ['', 'ind', 'stmt', 'paren', 'prop']);
+      return m;
+    };
+
+    tr.exprListScrollback = function (d, prev) {
+      while ((prev || '').match(/^\s*($|\/{2})/)) { prev = tr.output.pop(); }
+      d.prevLn = prev;
+      var m = rxm(prev, /^(\s*)(\w[\w\.= ]*|)\(/, ['', 'ind', 'stmt']);
+      if (!m) { return d; }
+      d.prevInd = m.ind;
+      d.prevStmt = m.stmt;
+      d.prevArgs = m.after;
+      return d;
+    };
+
+    tr.beginExprList = function (m) {
+      var eli = tr.exprListItem, ind = (m.ind || ''), deci, code;
+      eli.hadStmt = !!m.stmt;
+      eli.until = new RegExp('^' + maxRepeatRgx('\\s', m.untilMaxIndent
+        ) + '\\)', '');
+
+      deci = (m.customDeciderExpr || 'null');
+      if (deci.length > 23) { deci = expr2iife(deci, '\n  '); }
+
+      code = (ind + (m.stmt || '') + EX.shimName + '(' + deci + ', [');
+      ind += '  ';
+      function wr(c) { code += '\n' + indent(ind, c); }
+
+      if (m.expr1) { wr(expr2container(m.expr1)); }
+      if (m.prop) { wr(tr.renderFallbackExprLine(m)); }
+      tr.mthd(tr.debug && 'warn')('EL(', quot(code));
+      tr.mode = 'exprListItem';
+      return code;
+    };
+
+    tr.exprListItem = function eli(ln, m) {
+      m = ln.match(eli.until);
+      tr.mthd(tr.debug && 'warn')('EL until:', !!m, eli.until);
+      if (m) {
+        tr.mode = 'scan';
+        if (eli.hadStmt) { ln = ln.replace(/^ {2}/, ''); }
+        return ln.replace(/(\S)/, ']$1');
+      }
+
+      m = rxm(ln, /^(\s+):\s*/, ['', 'ind']);
+      tr.mthd(tr.debug && 'logMatch')(m, 'EL:…');
+      if (m) {
+        m = indent(m.ind, expr2container(m.after));
+        tr.mthd(tr.debug && 'warn')('EL :code', quot(m));
+        return m;
+      }
+
+      m = tr.isFallbackExprLine(ln);
+      tr.mthd(tr.debug && 'logMatch')(m, 'EL|?');
+      if (m) { return indent(m.ind, tr.renderFallbackExprLine(m)); }
+
+      tr.mthd(tr.debug && 'logMatch')(m, 'EL¬');
+      return ln;
+    };
+
+    tr.renderFallbackExprLine = function (m) {
+      var code;
+      if (m.prop) {
+        code = tr.mthd('exprListProp_' + m.prop)(m);
+        if (code) { return code; }
+      }
+      //tr.logMatch(m, 'eli:no_prop');
+      return expr2container(m.after);
+    };
+
+    tr.exprListProp_if = function (m) {
+      var ifExpr = rxm(m.after, /^\.if\(([ -'\*-~]+)\)\s*/);
+      if (!ifExpr) { return; }
+      return expr2container(ifExpr.after, { ifExpr: ifExpr[1] });
+    };
+
+
+
+    return function (code) {
+      if (code.split) { code = code.split(/\n/); }
+      arrAdd(inLn, code);
+      inLn.forEach(tr.readLine);
+      return { code: tr.output.join('\n'),
+        warnings: ifLen(tr.warnings, false) };
+    };
+  };
 
 
 
@@ -161,5 +290,6 @@
 
 
 
-  return pseudoTranspile;
+
+  return EX;
 });
