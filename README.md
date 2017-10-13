@@ -88,12 +88,17 @@ Use a custom decider function.
 If it's just about `null`, vote a thumbs-up emoji on
 [issue #4](https://github.com/mk-pmb/es-fallback-first-defined-value/issues/4).
 
+  * Update: The [Null Coalescing proposal][tc39-null-coal]
+    seems to be just what you're looking for.
+
 
 ### Is this a [Safe Navigation Operator][safe-nav-op]?
 
 No. I'd really like to have an SNO in JavaScript as well,
 but SNO is for diving deep into an object, whereas this proposal
 is about a decision chain with several unrelated values.
+
+  * Update: [It's on the horizon.][tc39-opt-chain]
 
 
 ### I don't care about people who want 0 sugars.
@@ -158,6 +163,8 @@ Feature creep galore.
   [ck-up]: https://raw.githubusercontent.com/mk-pmb/misc/master/gfm-util/img/checkmark-up.gif "⟎"
   [ck-pt]: https://raw.githubusercontent.com/mk-pmb/misc/master/gfm-util/img/checkmark-partial.gif "◪"
   [ck-no]: https://raw.githubusercontent.com/mk-pmb/misc/master/gfm-util/img/checkmark-minus.gif "☐"
+  [tc39-null-coal]: https://github.com/gisenberg/proposal-null-coalescing
+  [tc39-opt-chain]: https://github.com/TC39/proposal-optional-chaining
 
 -----
 
