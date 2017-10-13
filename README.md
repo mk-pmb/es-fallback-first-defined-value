@@ -2,7 +2,7 @@
 <!-- SSI tags powered by npm://readme-ssi -->
 
 Suppose a robot that can add sugar cubes to beverages.
-It has several methods for determining how many sugars to add,
+It has several methods for deciding how many sugars to add,
 so there must be some code that determines the highest-priority answer.
 
 
