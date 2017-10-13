@@ -19,13 +19,12 @@
     for (idx = 0; idx < list.length; idx += 1) {
       item = list[idx];
       chk = null;
-      if (item.ifExpr) { chk = item.ifExpr(); }
+      if (item.dfe) { chk = item.dfe(); }
       if (chk === null) { chk = dfltChk; }
       if (chk === null) { chk = isDefined; }
       if (typeof chk !== 'function') {
         throw new TypeError('Criterion must be either null or a function.');
       }
-      //if (item.ifExpr) { console.error({ ifExprFunc: chk.name }); }
       // calculate the value expression only if we can check it.
       val = item.calc();
       if (chk(val, prev)) { break; }
@@ -98,7 +97,7 @@
   function expr2container(ex, opt) {
     var code = '{ calc: ' + expr2func(ex);
     opt = (opt || false);
-    if (opt.ifExpr) { code += ', ifExpr: ' + expr2func(opt.ifExpr, 1); }
+    if (opt.dfe) { code += ', dfe: ' + expr2func(opt.dfe, 1); }
     return code + ' },';
   }
 
@@ -133,15 +132,18 @@
       + '|\\?(?!\\|)'
       ) + '{0,128}';
     rx.simpleExpr = par.deep.replace(/…|§/g, rx.flatSimpleExpr);
-    rx.fbOp = '\\?\\|(?=\\.([a-z]\\w*)|)';
+
+    rx.eolComment = / {2,}\/{2} +(\S[\S\s]*|)$/;
+    rx.simpleMultiLineCommentStart = /^\s*\/\*/;
+    rx.simpleMultiLineCommentEnd = /\*\/\s*$/;
+
+    rx.fbOp = '\\?\\|';
     rx.fallbackExprLine = rx('^(\\s*)' +
       grp('(?!\\s)' + rx.simpleExpr + '|') +
       grp(par.o + ' *|') +
-      rx.fbOp +
-      '\\s*', null, ['', 'ind', 'stmt', 'paren', 'prop']);
-    rx.fbProp_if = rx('^\\.if' + par(grp(rx.simpleExpr)) + '\\s*',
-      null, ['', 'cond']);
-    rx.eolComment = / {2,}\/{2} +(\S[\S\s]*|)$/;
+      rx.fbOp + '(:|)' +
+      '\\s*', null, ['', 'ind', 'stmt', 'paren', 'dfe']);
+    rx.fb_dfe = rx('^' + grp('\\w+|' + par(rx.simpleExpr)));
 
     return rx;
   }());
@@ -188,6 +190,11 @@
       tr.output.push(ln);
     };
 
+    tr.setMode = function (m) {
+      tr.mode = m;
+      return tr.mthd(m);
+    };
+
     tr.peek = function (o, n) {
       o = inLn.cur + (+o || 1);
       n = (+n || 1);
@@ -204,9 +211,16 @@
         tr.output.push(EX.shimDef);
         tr.addShimDef = false;
       }
+      m = ln.match(EX.rgx.simpleMultiLineCommentStart);
+      if (m) { return tr.setMode('multiLineComment')(ln); }
       m = rxm(ln, EX.rgx.fallbackExprLine);
       tr.mthd(tr.debug && 'logMatch')(m, 'fbl?');
       if (m) { return tr.scanFallbackExprLine(m, ln); }
+      return ln;
+    };
+
+    tr.multiLineComment = function (ln) {
+      if (ln.match(EX.rgx.simpleMultiLineCommentEnd)) { tr.mode = 'scan'; }
       return ln;
     };
 
@@ -214,7 +228,7 @@
       m.untilMaxIndent = m.ind.length;
       (function findStartingParen() {
         if (m.paren) {
-          if (m.prop) {
+          if (m.dfe) {
             m.expr1 = 'undefined';
             return;
           }
@@ -260,7 +274,7 @@
       function wr(c) { code += '\n' + indent(ind, c); }
 
       if (m.expr1) { wr(expr2container(m.expr1)); }
-      if (m.prop) { wr(tr.renderFallbackExprLine(m)); }
+      if (m.dfe) { wr(tr.renderFallbackExprLine(m)); }
       tr.mthd(tr.debug && 'warn')('EL(', quot(code));
       tr.mode = 'exprListItem';
       return code;
@@ -293,20 +307,17 @@
 
     tr.renderFallbackExprLine = function (m) {
       var code;
-      if (m.prop) {
-        code = tr.mthd('exprListProp_' + m.prop)(m);
+      if (m.dfe) {
+        code = tr.mthd('exprList_dfe')(m);
         if (code) { return code; }
       }
-      //tr.logMatch(m, 'eli:no_prop');
       return expr2container(m.after);
     };
 
-    tr.exprListProp_if = function (m) {
-      var code = m.after;
-      m = rxm(code, EX.rgx.fbProp_if);
-      tr.mthd(tr.debug && 'warn')('.if:', quot(code), quot.rxObj(m));
-      if (!m) { return; }
-      return expr2container(m.after, { ifExpr: m.cond });
+    tr.exprList_dfe = function (m) {
+      var code = m.after, dfe = rxm(code, EX.rgx.fb_dfe);
+      tr.mthd(tr.debug && 'warn')(':dfe', quot(code), quot.rxObj(dfe));
+      return expr2container(dfe.after, { dfe: dfe[0] });
     };
 
 

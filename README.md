@@ -72,37 +72,6 @@ New syntax to the rescue!
   * Code from [sugars.js](sugars.js). More details there.
 
 
-#### Individual criteria:
-
-<!--#include file="flakes.js" start="  //§pseudo-method-if" stop="  //§"
-  code="javascript" -->
-<!--#verbatim lncnt="16" -->
-```javascript
-  (undefined        // <- redundant   // [1]
-    ?|.if(pureWhite)        cloud1()  // [2]
-    ?|.if(colorful)         cloud2()
-    ?|.if(colorful)         cloud3()
-    ?| undefined    // <- just to show you can mix them.
-    ?|.if(codepoint.odd)    cloud4()
-    ?|.if(codepoint.odd)    cloud5()
-    ?|.if(codepoint.even)   cloud6()
-    ?|.if((Date.now() % 3) ? codepoint.odd : pureWhite)   cloud7()
-    ?|.if(codepoint.ascii)  cloud8()  // [3]
-    ?|.if(dontBotherMe)     cloud9()  // [4]
-    ?|.if(colorful)       auroraBorealis()
-    ?| { error: "Couldn't find any. :-(" }
-  ),
-```
-<!--/include-->
-
-  * Precedence of `|?.if(…)` is same as `|?`
-  * `|?.if(deciderExpr)` works mostly like `|?` but with
-    a custom criterion for the (one) next candidate value.
-    * If you want to avoid the above repetitions, just open a new
-      level or parens for a chain with a custom decider function.
-  * Code from [flakes.js](flakes.js). More details there.
-
-
 
 Q&amp;A
 -------
@@ -131,6 +100,52 @@ is about a decision chain with several unrelated values.
 
 Then instead let's calclulare the amount of damage your character takes,
 or how many ads to show before a funny cat video.
+
+
+
+Optional extensions
+-------------------
+
+Feature creep galore.
+
+#### Individual criteria:
+
+<!--#include file="flakes.js" start="  //§pseudo-method-if" stop="  //§"
+  code="javascript" -->
+<!--#verbatim lncnt="16" -->
+```javascript
+  (undefined        // <- redundant   // [1]
+    ?|: pureWhite           cloud1()  // [2]
+    ?|: colorful            cloud2()
+    ?|: colorful            cloud3()
+    ?|  undefined   // <- just to show you can mix them.
+    ?|: (codepoint.odd)     cloud4()
+    ?|: (codepoint.odd)     cloud5()
+    ?|: (codepoint.even)    cloud6()
+    ?|: ((Date.now() % 3) ? codepoint.odd : pureWhite)   cloud7()
+    ?|: (codepoint.ascii)   cloud8()  // [3]
+    ?|: dontBotherMe        cloud9()  // [4]
+    ?|: colorful            auroraBorealis()
+    ?|  { error: "Couldn't find any. :-(" }
+  ),
+```
+<!--/include-->
+
+  * Precedence of `|?:` is same as `|?`
+  * `|?:` works mostly like `|?` but with a custom criterion
+    for the (one) next candidate value.
+    * If you want to avoid the above repetitions, just open a new
+      level or parens for a chain with a custom decider function.
+  * Code from [flakes.js](flakes.js). More details there.
+
+
+#### Hindsight
+
+  * Custom decider functions get the chain's previous value as 2nd argument.
+    Details: [hindsight.js](hindsight.js)
+
+
+
 
 
 

@@ -22,10 +22,10 @@ function divides(next, prev) { return ((prev % next) === 0); }
 
 test.eq("Custom comparisons for each expression", 6,
   (undefined
-    ?|.if(muchGreater)  23
-    ?|.if(muchGreater)  42
-    ?|.if(divides)      6
-    ?|.if(muchGreater)  9001
+    ?|: muchGreater   23
+    ?|: muchGreater   42
+    ?|: divides       6
+    ?|: muchGreater   9001
   )
   );
 

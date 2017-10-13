@@ -19,14 +19,6 @@
   "scripts": { "test": "bash test/all.sh" },
   "directories": { "test": "test" },
 
-  "dependencies": {
-  },
-  "devDependencies": {
-    "equal-pmb": "^0.1.15",
-    "usnam-pmb": "^0.2.3"
-  },
-
-
 
   "npm vs. BOM = Unexpected token": "-*- coding: UTF-8 -*-"
 }
