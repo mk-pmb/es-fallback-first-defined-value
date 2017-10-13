@@ -1,5 +1,5 @@
 { "name": "es-fallback-first-defined-value",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pseudo-transpiler for my suggested ?| operator",
   "keywords": [],
 

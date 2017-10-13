@@ -9,7 +9,7 @@
 })(function () {
   'use strict';
 
-  var EX, arMap = Array.prototype.map;
+  var EX, arMap = Array.prototype.map, obAss = Object.assign;
   EX = function (code) { return EX.makeTranspiler()(code); };
 
   EX.shim = function stopAtFirstAcceptable___TRANSPILE_SHIM(dfltChk, list) {
@@ -53,10 +53,21 @@
     if (!isStr(x)) { return String(x); }
     return ('«' + x.replace(/\n/g, '¶\n\t\t^') + '»');
   }
+  quot.rxObj = function (o) {
+    if (!o) { return quot(o); }
+    function quotKey(k) { return k + ':' + quot(o[k]); }
+    o = obAss([], o);
+    delete o.index;
+    delete o.input;
+    delete o.before;
+    //delete o.after;
+    return Object.keys(o).sort().map(quotKey).join(', ');
+  };
 
   function rxm(s, r, g) {
     var m = r.exec(s);
     if (!m) { return false; }
+    g = (g || r.groupNames);
     if (g && g.forEach) {
       g.forEach(function (k, i) {
         if (!k) { return; }
@@ -76,6 +87,7 @@
     || errIncompat());
 
   function expr2func(ex, maxW) {
+    ex = ex.replace(EX.rgx.eolComment, '').trim();
     var nl = (isStr(maxW) ? maxW : (ex.length < (maxW || 42) ? '' : '\n'));
     return ('function () {' + nl + (nl && ' ') +
       ' return ' + ex + ';' + (nl || ' ') + '}');
@@ -94,6 +106,45 @@
     m = +m;
     return (m > 0 ? (h + '{0,' + m + '}' + (t || '')) : '');
   }
+
+
+  EX.rgx = (function () {
+    function rx(r, f, g) {
+      r = new RegExp(rx[r] || r, (f || ''));
+      if (g) { r.groupNames = g; }
+      return r;
+    }
+    function wr(o, c) {
+      return obAss(function (r) { return o + r + c; }, { o: o, c: c });
+    }
+    var grp = wr('(', ')'), par = wr('\\(', '\\)'), brk = wr('[', ']');
+    par.deep = '…(?:<§>…)*';
+    par.deep = par.deep.replace(/§/g, par.deep
+      ).replace(/§/g, par.deep
+      ).replace(/</g, par.o).replace(/>/g, par.c);
+
+    rx.flatSimpleExpr = grp('?:'
+      + brk('\\w'
+          + " -'"
+          + '\\*-\\.'
+          + ':->'
+          + '@-\\uFFFF')
+      + '|\\/(?!\\/|\\*)'
+      + '|\\?(?!\\|)'
+      ) + '{0,128}';
+    rx.simpleExpr = par.deep.replace(/…|§/g, rx.flatSimpleExpr);
+    rx.fbOp = '\\?\\|(?=\\.([a-z]\\w*)|)';
+    rx.fallbackExprLine = rx('^(\\s*)' +
+      grp('(?!\\s)' + rx.simpleExpr + '|') +
+      grp(par.o + ' *|') +
+      rx.fbOp +
+      '\\s*', null, ['', 'ind', 'stmt', 'paren', 'prop']);
+    rx.fbProp_if = rx('^\\.if' + par(grp(rx.simpleExpr)) + '\\s*',
+      null, ['', 'cond']);
+    rx.eolComment = / {2,}\/{2} +(\S[\S\s]*|)$/;
+
+    return rx;
+  }());
 
 
   EX.makeTranspiler = function () {
@@ -145,16 +196,7 @@
     };
 
     tr.logMatch = function (m, hint) {
-      function quotKey(k) { return k + ':' + quot(m[k]); }
-      if (m) {
-        m = Object.assign([], m);
-        delete m.index;
-        delete m.input;
-        delete m.before;
-        //delete m.after;
-        m = Object.keys(m).sort().map(quotKey).join(', ');
-      }
-      tr.warn(hint, quot(inLn[inLn.cur]), m);
+      tr.warn(hint, quot(inLn[inLn.cur]), quot.rxObj(m));
     };
 
     tr.scan = function (ln, m) {
@@ -162,7 +204,7 @@
         tr.output.push(EX.shimDef);
         tr.addShimDef = false;
       }
-      m = tr.isFallbackExprLine(ln);
+      m = rxm(ln, EX.rgx.fallbackExprLine);
       tr.mthd(tr.debug && 'logMatch')(m, 'fbl?');
       if (m) { return tr.scanFallbackExprLine(m, ln); }
       return ln;
@@ -191,13 +233,6 @@
       }());
       tr.mthd(tr.debug && 'logMatch')(m, 'scan |?');
       return tr.beginExprList(m);
-    };
-
-    tr.isFallbackExprLine = function (ln) {
-      var m = rxm(ln,
-        /^(\s+)(\w[\w\.= ]*|)(\(\)? *|)\?\|(?=\.([a-z]\w*)|)\s*/,
-        ['', 'ind', 'stmt', 'paren', 'prop']);
-      return m;
     };
 
     tr.exprListScrollback = function (d, prev) {
@@ -248,7 +283,7 @@
         return m;
       }
 
-      m = tr.isFallbackExprLine(ln);
+      m = rxm(ln, EX.rgx.fallbackExprLine);
       tr.mthd(tr.debug && 'logMatch')(m, 'EL|?');
       if (m) { return indent(m.ind, tr.renderFallbackExprLine(m)); }
 
@@ -267,9 +302,11 @@
     };
 
     tr.exprListProp_if = function (m) {
-      var ifExpr = rxm(m.after, /^\.if\(([ -'\*-~]+)\)\s*/);
-      if (!ifExpr) { return; }
-      return expr2container(ifExpr.after, { ifExpr: ifExpr[1] });
+      var code = m.after;
+      m = rxm(code, EX.rgx.fbProp_if);
+      tr.mthd(tr.debug && 'warn')('.if:', quot(code), quot.rxObj(m));
+      if (!m) { return; }
+      return expr2container(m.after, { ifExpr: m.cond });
     };
 
 

@@ -27,33 +27,37 @@ codepoint.even = function (sf) { return !codepoint.odd(sf); };
 function dontBotherMe() { throw new Error('bothered'); }
 function auroraBorealis() { throw new Error("I don't produce snow."); }
 
-var month = 12, test = require('./test/lib_test.js');
+var test = require('./test/lib_test.js');
 
 test.deepEq("First acceptable snowflake",
-  (undefined
-    // ^-- implied if ?|.if() is encountered with no previous expression.
-    ?|.if(pureWhite)        cloud1()
-    // ^-- Stuff in .if()'s parens = decider function expression.
-    //   The DFE determines whether the _next_ value in the chain is
-    //   considered acceptable.
-    //   The DFE expected to evaluate to a function,
-    //   or null = use default criteria.
-    //   Any other result = runtime Error because probably your
-    //   lookup failed, e.g. codepoint.off instead of .odd.
+  //§pseudo-method-if
+  (undefined        // <- redundant   // [1]
+    ?|.if(pureWhite)        cloud1()  // [2]
     ?|.if(colorful)         cloud2()
     ?|.if(colorful)         cloud3()
+    ?| undefined    // <- just to show you can mix them.
     ?|.if(codepoint.odd)    cloud4()
     ?|.if(codepoint.odd)    cloud5()
     ?|.if(codepoint.even)   cloud6()
-    ?|.if(month % 3 ? codepoint.even : pureWhite)   cloud7()
-    ?|.if(codepoint.ascii)  cloud8()
-    // ^-- A match! Evaluation should stop here. Therefore, …
-    ?|.if(dontBotherMe)     cloud9()
-    // ^-- … this .if()
+    ?|.if((Date.now() % 3) ? codepoint.odd : pureWhite)   cloud7()
+    ?|.if(codepoint.ascii)  cloud8()  // [3]
+    ?|.if(dontBotherMe)     cloud9()  // [4]
     ?|.if(colorful)       auroraBorealis()
     ?| { error: "Couldn't find any. :-(" }
   ),
+  //§
   cloud8());
+
+// [1]  An initial undefined is implied if ?|.if() is
+//      encountered with no previous expression.
+// [2]  Stuff in .if()'s parens = decider function expression.
+//      The DFE determines whether the _next_ value in the chain
+//      is considered acceptable. The DFE expected to evaluate to
+//      a function, or null = use default criteria.
+//      Any other result = runtime Error because probably your
+//      lookup failed, e.g. codepoint.off instead of .odd.
+// [3]  This matches, so evaluation should stop here. Therefore, …
+// [4]  … this decider shouldn't be invoked.
 
 
 test.err("Evaluate DFE first", function () {

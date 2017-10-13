@@ -28,6 +28,8 @@ the (meaning of the) result or might have thrown an Error.
 New syntax to the rescue!
 -------------------------
 
+#### First defined value:
+
 <!--#include file="sugars.js" start="  //§new-syntax" stop="  //§"
   code="javascript" -->
 <!--#verbatim lncnt="7" -->
@@ -39,6 +41,14 @@ New syntax to the rescue!
     );
 ```
 <!--/include-->
+
+  * Precedence like `||`
+  * Picks the next value in the chain until it encounters a value
+    that is defined (`!== undefined`).
+  * Code from [sugars.js](sugars.js). More details there.
+
+
+#### Custom decider function:
 
 <!--#include file="sugars.js" start="  //§custom-decider-func" stop="  //§"
   code="javascript" -->
@@ -56,19 +66,56 @@ New syntax to the rescue!
 ```
 <!--/include-->
 
-* For detauls, read the comments in [sugars.js](sugars.js).
-* For `?|` with different criteria for each expression,
-  see [flakes.js](flakes.js).
+  * Precedence like `… ? … : …`
+  * Picks the next value in the chain until it encounters a value
+    for which the decider function returns a truthy value.
+  * Code from [sugars.js](sugars.js). More details there.
+
+
+#### Individual criteria:
+
+<!--#include file="flakes.js" start="  //§pseudo-method-if" stop="  //§"
+  code="javascript" -->
+<!--#verbatim lncnt="16" -->
+```javascript
+  (undefined        // <- redundant   // [1]
+    ?|.if(pureWhite)        cloud1()  // [2]
+    ?|.if(colorful)         cloud2()
+    ?|.if(colorful)         cloud3()
+    ?| undefined    // <- just to show you can mix them.
+    ?|.if(codepoint.odd)    cloud4()
+    ?|.if(codepoint.odd)    cloud5()
+    ?|.if(codepoint.even)   cloud6()
+    ?|.if((Date.now() % 3) ? codepoint.odd : pureWhite)   cloud7()
+    ?|.if(codepoint.ascii)  cloud8()  // [3]
+    ?|.if(dontBotherMe)     cloud9()  // [4]
+    ?|.if(colorful)       auroraBorealis()
+    ?| { error: "Couldn't find any. :-(" }
+  ),
+```
+<!--/include-->
+
+  * Precedence of `|?.if(…)` is same as `|?`
+  * `|?.if(deciderExpr)` works mostly like `|?` but with
+    a custom criterion for the (one) next candidate value.
+    * If you want to avoid the above repetitions, just open a new
+      level or parens for a chain with a custom decider function.
+  * Code from [flakes.js](flakes.js). More details there.
 
 
 
 Q&amp;A
 -------
 
+### Neat, where's the babel plugin?
+
+I wish I had one.
+For now the tests use a RegExp-based pseudo-transpiler.
+
+
 ### What if I want to accept `null` or `undefined` but not `false`?
 
-Use custom criteria, as shown at the bottom of [sugars.js](sugars.js).
-
+Use a custom decider function.
 If it's just about `null`, vote a thumbs-up emoji on
 [issue #4](https://github.com/mk-pmb/es-fallback-first-defined-value/issues/4).
 
